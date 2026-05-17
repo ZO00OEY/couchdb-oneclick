@@ -437,11 +437,13 @@ IP_ARRAY=($(printf '%s\n' "${IP_ARRAY[@]}" | sort -u))
 
 if [[ ${#IP_ARRAY[@]} -eq 0 ]]; then
     echo -e "  ${YELLOW}未能自动检测到 IP 地址${NC}"
+    echo -e "  ${YELLOW}（如使用了网络代理/VPN，检测的可能是代理 IP）${NC}"
     echo ""
     read -r -p "  请输入服务器地址 (IP 或域名): " SERVER_ADDR
 elif [[ ${#IP_ARRAY[@]} -eq 1 ]]; then
     # 只有一个 IP，回车确认或输入
     echo -e "  检测到服务器 IP: ${GREEN}${BOLD}${IP_ARRAY[0]}${NC}"
+    echo -e "  ${YELLOW}  如使用了网络代理/VPN，检测的可能不是服务器真实 IP${NC}"
     echo ""
     read -r -p "  按回车确认，或输入其他地址 (IP/域名): " input
     if [[ -z "$input" ]]; then
@@ -452,6 +454,10 @@ elif [[ ${#IP_ARRAY[@]} -eq 1 ]]; then
 else
     # 多个 IP，编号选择
     echo "  检测到以下可用地址:"
+    echo -e "  ${YELLOW}-----------------------------------------${NC}"
+    echo -e "  ${YELLOW}  如使用了网络代理/VPN，检测的可能不是服务器真实 IP${NC}"
+    echo -e "  ${YELLOW}  请选择正确的地址或手动输入${NC}"
+    echo -e "  ${YELLOW}-----------------------------------------${NC}"
     echo -e "  ${CYAN}─────────────────────────────────${NC}"
     i=1
     for ip in "${IP_ARRAY[@]}"; do
