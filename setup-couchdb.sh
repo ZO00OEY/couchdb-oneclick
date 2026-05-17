@@ -49,19 +49,6 @@ print_warning() {
     echo -e "  ${YELLOW}⚠${NC} $1"
 }
 
-# 调用 CouchDB API（不带认证）
-api_noauth() {
-    local method=$1 url=$2 data=$3
-    if [[ -n "$data" ]]; then
-        curl -s -X "$method" "http://localhost:5984${url}" \
-            -H "Content-Type: application/json" \
-            -d "$data"
-    else
-        curl -s -X "$method" "http://localhost:5984${url}" \
-            -H "Content-Type: application/json"
-    fi
-}
-
 # 调用 CouchDB API（带认证）
 api() {
     local method=$1 url=$2 data=$3
@@ -246,7 +233,6 @@ if ! $COUCHDB_ALREADY_INSTALLED; then
         tee /etc/apt/sources.list.d/couchdb.list > /dev/null
 
     # 安装（预填配置项，跳过交互界面）
-    # 预填安装配置项，跳过交互界面
     echo "couchdb couchdb/mode select standalone" | debconf-set-selections
     echo "couchdb couchdb/bindaddress string 127.0.0.1" | debconf-set-selections
     echo "couchdb couchdb/cookie string ${COUCHDB_COOKIE}" | debconf-set-selections
@@ -257,17 +243,40 @@ if ! $COUCHDB_ALREADY_INSTALLED; then
     print_success "CouchDB 安装完成"
 fi
 
-# ----- 6. 等待 CouchDB 启动 -----
+# ----- 6. 写入管理员密码到配置文件 -----
 STEP=$((STEP + 1))
-print_step "$STEP" "等待 CouchDB 服务就绪"
+print_step "$STEP" "写入管理员密码到配置"
 
-# 确保服务在运行
+# CouchDB 3.4+ 不支持无密码启动（admin party 模式已废弃）
+# 必须在配置文件中创建管理员账号，CouchDB 才能启动
+mkdir -p /opt/couchdb/etc/local.d
+if [[ ! -f /opt/couchdb/etc/local.d/admin.ini ]]; then
+    cat > /opt/couchdb/etc/local.d/admin.ini << INI
+[admins]
+${COUCHDB_USER} = ${COUCHDB_PASSWORD}
+INI
+    print_success "管理员 ${COUCHDB_USER} 已配置"
+else
+    echo -e "  ${YELLOW}管理员配置已存在，跳过${NC}"
+fi
+
+# 一并写入监听地址到配置文件（避免后续重启）
+cat > /opt/couchdb/etc/local.d/bind_address.ini << INI
+[chttpd]
+bind_address = 0.0.0.0
+INI
+print_success "监听地址已设为 0.0.0.0"
+
+# ----- 7. 启动 CouchDB -----
+STEP=$((STEP + 1))
+print_step "$STEP" "启动 CouchDB 服务"
+
 systemctl start couchdb 2>/dev/null || service couchdb start 2>/dev/null || true
 
 MAX_WAIT=60
 WAITED=0
 while [[ $WAITED -lt $MAX_WAIT ]]; do
-    if curl -s --connect-timeout 2 "http://localhost:5984/_up" 2>/dev/null | grep -q '"status":"ok"'; then
+    if curl -s --connect-timeout 2 -u "${COUCHDB_USER}:${COUCHDB_PASSWORD}" "http://localhost:5984/_up" 2>/dev/null | grep -q '"status":"ok"'; then
         break
     fi
     sleep 2
@@ -280,66 +289,7 @@ if [[ $WAITED -ge $MAX_WAIT ]]; then
 fi
 print_success "CouchDB 已就绪"
 
-# ----- 7. 配置单节点 -----
-STEP=$((STEP + 1))
-print_step "$STEP" "配置 CouchDB 单节点"
-
-SINGLE_NODE_DONE=false
-
-# 先检查是否已经配置过了（admin party 已关闭）
-if curl -s "http://localhost:5984/_up" 2>/dev/null | grep -q '"status":"ok"'; then
-    # 尝试不带认证访问 _cluster_setup，如果 401 说明已配置
-    HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "http://localhost:5984/_cluster_setup" 2>/dev/null || true)
-    if [[ "$HTTP_CODE" == "401" ]] || [[ "$HTTP_CODE" == "403" ]]; then
-        # 用我们的凭证试试能否通过认证
-        if api "GET" "/_up" | grep -q '"status":"ok"'; then
-            echo -e "  ${YELLOW}单节点已配置，跳过此步${NC}"
-            SINGLE_NODE_DONE=true
-        else
-            print_error "CouchDB 已配置但凭证不匹配，请检查现有配置"
-            exit 1
-        fi
-    fi
-fi
-
-if ! $SINGLE_NODE_DONE; then
-    RESP=$(api_noauth "POST" "/_cluster_setup" \
-        "{\"action\":\"enable_single_node\",\"username\":\"${COUCHDB_USER}\",\"password\":\"${COUCHDB_PASSWORD}\",\"singlenode\":true}")
-
-    if echo "$RESP" | grep -q '"ok"'; then
-        print_success "单节点配置完成"
-    else
-        print_error "单节点配置失败: $RESP"
-        exit 1
-    fi
-fi
-
-# ----- 8. 设置监听地址 -----
-STEP=$((STEP + 1))
-print_step "$STEP" "设置监听地址为 0.0.0.0（允许外部设备连接）"
-set_config "chttpd" "bind_address" "0.0.0.0"
-
-# 重启 CouchDB 使监听地址生效
-echo "  重启 CouchDB 使设置生效..."
-systemctl restart couchdb 2>/dev/null || service couchdb restart 2>/dev/null || true
-
-# 等待重启完成
-WAITED=0
-while [[ $WAITED -lt 30 ]]; do
-    if api "GET" "/_up" 2>/dev/null | grep -q '"status":"ok"'; then
-        break
-    fi
-    sleep 2
-    ((WAITED+=2))
-done
-
-if [[ $WAITED -ge 30 ]]; then
-    print_error "CouchDB 重启后超时，请检查: systemctl status couchdb"
-    exit 1
-fi
-print_success "CouchDB 已重启并就绪"
-
-# ----- 9. 创建数据库 -----
+# ----- 8. 创建数据库 -----
 STEP=$((STEP + 1))
 print_step "$STEP" "创建数据库: ${COUCHDB_DB}"
 
@@ -355,7 +305,7 @@ else
     exit 1
 fi
 
-# ----- 10. 写入 9 项配置 -----
+# ----- 9. 写入 9 项配置 -----
 STEP=$((STEP + 1))
 print_step "$STEP" "写入 CouchDB 配置（共 9 项）"
 
@@ -412,7 +362,7 @@ else
     print_warning "部分配置写入失败，请查看上方错误"
 fi
 
-# ----- 11. 验证 -----
+# ----- 10. 验证 -----
 STEP=$((STEP + 1))
 print_step "$STEP" "验证配置"
 
@@ -466,7 +416,7 @@ else
     print_warning "部分验证未通过"
 fi
 
-# ----- 12. IP 交互确认 -----
+# ----- 11. IP 交互确认 -----
 STEP=$((STEP + 1))
 print_step "$STEP" "确认服务器连接地址"
 echo ""
@@ -536,7 +486,7 @@ fi
 echo ""
 print_success "服务器地址: ${SERVER_ADDR}"
 
-# ----- 13. 保存凭证并打印 -----
+# ----- 12. 保存凭证并打印 -----
 STEP=$((STEP + 1))
 print_step "$STEP" "保存凭证并输出"
 
@@ -585,8 +535,8 @@ echo -e "  ${YELLOW}    如需修改密码，请访问 Web 管理后台操作。
 echo -e "  ${YELLOW}3. 凭证已备份到: ${CREDENTIALS_FILE}${NC}"
 echo ""
 
-# ----- 14. 防火墙提醒 -----
-print_step "14" "防火墙检查提醒"
+# ----- 13. 防火墙提醒 -----
+print_step "13" "防火墙检查提醒"
 echo ""
 echo -e "  ${YELLOW}如果你使用了防火墙，请确保开放 5984 端口：${NC}"
 echo ""
