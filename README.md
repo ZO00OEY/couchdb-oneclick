@@ -9,7 +9,7 @@ Debian 11/12 及 Ubuntu 20.04/22.04/24.04（需要 `apt` 包管理器）。
 ## 使用方法
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/ZO00OEY/couchdb-oneclick/master/setup-couchdb.sh | sudo bash
+git clone https://github.com/ZO00OEY/couchdb-oneclick.git && cd couchdb-oneclick && sudo bash setup-couchdb.sh
 ```
 
 脚本会自动完成：
@@ -24,7 +24,7 @@ curl -fsSL https://raw.githubusercontent.com/ZO00OEY/couchdb-oneclick/master/set
 ## 更新并运行
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/ZO00OEY/couchdb-oneclick/master/setup-couchdb.sh | sudo bash
+cd couchdb-oneclick && git pull && sudo bash setup-couchdb.sh
 ```
 
 ## 运行完成后
