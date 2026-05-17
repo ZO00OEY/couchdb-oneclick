@@ -493,7 +493,7 @@ print_success "服务器地址: ${SERVER_ADDR}"
 STEP=$((STEP + 1))
 print_step "$STEP" "保存凭证并输出"
 
-# 写入凭证文件
+# 写入凭证文件（完整备份终端输出的全部信息）
 cat > "${CREDENTIALS_FILE}" << EOF
 ============================================================
   CouchDB + Obsidian LiveSync 连接信息
@@ -504,10 +504,22 @@ cat > "${CREDENTIALS_FILE}" << EOF
   密码:        ${COUCHDB_PASSWORD}
   数据库名:    ${COUCHDB_DB}
 
-  Web 管理后台: http://${SERVER_ADDR}:5984/_utils
+  提示：如果配合一键 IP 证书脚本使用了反向代理 + HTTPS，
+  服务器地址可填: https://${SERVER_ADDR}/couchdb/
+  手机端同步必须使用 https:// 开头的地址
+  项目地址: https://github.com/ZO00OEY/ip-ssl-proxy
 
-  --- 以下为内部配置（一般用不上）---
-  Erlang Cookie: ${COUCHDB_COOKIE}
+  Web 管理后台: http://${SERVER_ADDR}:5984/_utils
+  内部配置（一般用不上）: Erlang Cookie = ${COUCHDB_COOKIE}
+
+============================================================
+  重要提醒
+============================================================
+
+  1. 请立刻复制保存上方密码！一旦丢失需要重装才能找回。
+  2. CouchDB 管理员密码不以明文形式保存在服务器文件中，
+     如需修改密码，请访问 Web 管理后台操作。
+  3. 凭证已备份到此文件。
 
 ============================================================
 EOF
