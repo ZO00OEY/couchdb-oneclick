@@ -557,6 +557,9 @@ cat > "${CREDENTIALS_FILE}" << EOF
 
   Web 管理后台: http://${SERVER_ADDR}:5984/_utils
 
+  --- 以下为内部配置（一般用不上）---
+  Erlang Cookie: ${COUCHDB_COOKIE}
+
 ============================================================
 EOF
 
@@ -573,6 +576,8 @@ echo -e "  ${BOLD}密码:${NC}        ${GREEN}${COUCHDB_PASSWORD}${NC}"
 echo -e "  ${BOLD}数据库名:${NC}    ${GREEN}${COUCHDB_DB}${NC}"
 echo ""
 echo -e "  ${BOLD}Web 管理后台:${NC} ${CYAN}http://${SERVER_ADDR}:5984/_utils${NC}"
+echo ""
+echo -e "  ${YELLOW}内部配置（一般用不上）: Erlang Cookie = ${COUCHDB_COOKIE}${NC}"
 echo ""
 echo -e "${YELLOW}${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 echo -e "${YELLOW}${BOLD}  ⚠ 重要提醒${NC}"
