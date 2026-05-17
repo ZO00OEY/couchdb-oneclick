@@ -568,7 +568,7 @@ if command -v firewall-cmd &>/dev/null; then
 fi
 
 echo ""
-echo -e "  ${RED}${BOLD}云服务器请在安全组中添加入站规则: TCP 5984${NC}"
+echo -e "  ${YELLOW}${BOLD}云服务器请在安全组中添加入站规则: TCP 5984${NC}"
 echo ""
 echo -e -n "  ${RED}${BOLD}⚠ 请确认已在云服务器控制台检查安全组入站规则（TCP 5984），按回车继续...${NC} "
 read -r </dev/tty
