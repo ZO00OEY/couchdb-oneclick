@@ -193,6 +193,19 @@ fi
 # 生成随机 Erlang cookie（CouchDB 节点间通信用）
 COUCHDB_COOKIE=$(openssl rand -hex 16)
 
+# 无论后续是否失败，先把密码存到文件，避免重跑时密码丢失
+cat > "${CREDENTIALS_FILE}" << EOF
+============================================================
+  CouchDB + Obsidian LiveSync 连接信息
+============================================================
+
+  用户名:      ${COUCHDB_USER}
+  密码:        ${COUCHDB_PASSWORD}
+  数据库名:    ${COUCHDB_DB}
+
+EOF
+print_success "凭证已暂存到 ${CREDENTIALS_FILE}"
+
 # ----- 5. 安装 CouchDB -----
 STEP=$((STEP + 1))
 print_step "$STEP" "安装 CouchDB"
@@ -231,17 +244,30 @@ STEP=$((STEP + 1))
 print_step "$STEP" "写入管理员密码到配置"
 
 # CouchDB 3.4+ 不支持无密码启动（admin party 模式已废弃）
-# 必须在配置文件中创建管理员账号，CouchDB 才能启动
+# 通过 local.d/admin.ini 始终覆盖写入，确保变量内密码与配置文件一致
+# 不检查用户是否已存在，杜绝重跑时密码不一致的 bug
 mkdir -p /opt/couchdb/etc/local.d
-if ! grep -q "${COUCHDB_USER}" /opt/couchdb/etc/local.ini 2>/dev/null; then
-    cat >> /opt/couchdb/etc/local.ini << INI
+
+cat > /opt/couchdb/etc/local.d/admin.ini << INI
 [admins]
 ${COUCHDB_USER} = ${COUCHDB_PASSWORD}
 INI
-    print_success "管理员 ${COUCHDB_USER} 已配置"
-else
-    echo -e "  ${YELLOW}管理员配置已存在，跳过${NC}"
+chown couchdb:couchdb /opt/couchdb/etc/local.d/admin.ini
+
+# 如果 CouchDB 已在运行，重启使新密码生效（预防重跑时密码不同步）
+NEED_ADMIN_RESTART=false
+if curl -s --connect-timeout 2 "http://localhost:5984/_up" 2>/dev/null | grep -q '"status":"ok"'; then
+    NEED_ADMIN_RESTART=true
 fi
+
+if $NEED_ADMIN_RESTART; then
+    echo "  CouchDB 已在运行，重启应用密码配置..."
+    systemctl reset-failed couchdb 2>/dev/null || true
+    systemctl restart couchdb 2>/dev/null || service couchdb restart 2>/dev/null || true
+    sleep 2
+fi
+
+print_success "管理员 ${COUCHDB_USER} 已配置"
 
 # 一并写入监听地址到配置文件（避免后续重启）
 cat > /opt/couchdb/etc/local.d/bind_address.ini << INI
