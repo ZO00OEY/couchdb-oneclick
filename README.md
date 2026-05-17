@@ -27,6 +27,18 @@ git clone https://github.com/ZO00OEY/couchdb-oneclick.git && cd couchdb-oneclick
 cd couchdb-oneclick && git pull && sudo bash setup-couchdb.sh
 ```
 
+与上方安装命令相同，一条命令同时兼容首次安装和后续更新。
+
+## 安装中断或异常
+
+如果安装 CouchDB 过程中被中断（如网络断开、误 Ctrl+C、交互界面卡住），需要先清除残留数据再重新运行：
+
+```bash
+sudo apt purge -y couchdb && sudo rm -rf /opt/couchdb && cd couchdb-oneclick && git pull && sudo bash setup-couchdb.sh
+```
+
+不清除直接重跑会导致冲突（GPG 密钥文件残留、CouchDB 半安装状态等）。
+
 ## 运行完成后
 
 脚本会在屏幕醒目显示连接信息，同时保存一份到当前目录下的 `couchdb-credentials.txt`。
