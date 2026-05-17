@@ -246,14 +246,10 @@ if ! $COUCHDB_ALREADY_INSTALLED; then
         tee /etc/apt/sources.list.d/couchdb.list > /dev/null
 
     # 安装（预填配置项，跳过交互界面）
-    # 预填安装配置项，跳过所有交互界面
-    debconf-set-selections << DEBCONF
-couchdb couchdb/mode select standalone
-couchdb couchdb/bindaddress string 127.0.0.1
-couchdb couchdb/cookie string ${COUCHDB_COOKIE}
-couchdb couchdb/adminpass password ${COUCHDB_PASSWORD}
-couchdb couchdb/adminpass_confirm password ${COUCHDB_PASSWORD}
-DEBCONF
+    # 预填安装配置项，跳过交互界面
+    echo "couchdb couchdb/mode select standalone" | debconf-set-selections
+    echo "couchdb couchdb/bindaddress string 127.0.0.1" | debconf-set-selections
+    echo "couchdb couchdb/cookie string ${COUCHDB_COOKIE}" | debconf-set-selections
     echo "  正在安装 CouchDB..."
     apt update -q
     DEBIAN_FRONTEND=noninteractive apt install -y couchdb
