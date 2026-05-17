@@ -21,6 +21,12 @@ git clone https://github.com/ZO00OEY/couchdb-oneclick.git && cd couchdb-oneclick
 - 验证全部配置
 - 输出连接信息
 
+## 更新并运行
+
+```bash
+cd couchdb-oneclick && git pull && sudo bash setup-couchdb.sh
+```
+
 ## 运行完成后
 
 脚本会在屏幕醒目显示连接信息，同时保存一份到当前目录下的 `couchdb-credentials.txt`。
