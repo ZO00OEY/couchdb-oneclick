@@ -221,6 +221,9 @@ if [[ -z "$COUCHDB_PASSWORD" ]]; then
     print_success "数据库名: ${COUCHDB_DB}"
 fi
 
+# 生成随机 Erlang cookie（CouchDB 节点间通信用）
+COUCHDB_COOKIE=$(openssl rand -hex 16)
+
 # ----- 5. 安装 CouchDB -----
 STEP=$((STEP + 1))
 print_step "$STEP" "安装 CouchDB"
@@ -247,7 +250,7 @@ if ! $COUCHDB_ALREADY_INSTALLED; then
     debconf-set-selections << DEBCONF
 couchdb couchdb/mode select standalone
 couchdb couchdb/bindaddress string 127.0.0.1
-couchdb couchdb/cookie string monster
+couchdb couchdb/cookie string ${COUCHDB_COOKIE}
 couchdb couchdb/adminpass password ${COUCHDB_PASSWORD}
 couchdb couchdb/adminpass_confirm password ${COUCHDB_PASSWORD}
 DEBCONF
