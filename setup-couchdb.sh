@@ -396,7 +396,7 @@ if [[ -z "$SERVER_ADDR" ]]; then
     read -r -p "  请输入服务器地址 (IP 或域名): " SERVER_ADDR
 else
     echo -e "  检测到公网 IP: ${GREEN}${BOLD}${SERVER_ADDR}${NC}"
-    echo -e "  ${YELLOW}  如使用了网络代理/VPN，检测的可能不是服务器真实 IP${NC}"
+    echo -e "  ${YELLOW}如使用了网络代理/VPN，检测的可能不是服务器真实 IP${NC}"
     echo ""
     read -r -p "  按回车确认，或输入正确的地址 (IP/域名) [${SERVER_ADDR}]: " input
     if [[ -n "$input" ]]; then
