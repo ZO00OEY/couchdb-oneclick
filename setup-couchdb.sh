@@ -150,7 +150,7 @@ STEP=0
 print_banner
 
 # ----- 1. 检测 root 权限 -----
-((STEP++))
+STEP=$((STEP + 1))
 print_step "$STEP" "检测 root 权限"
 if [[ $EUID -ne 0 ]]; then
     print_error "请使用 sudo 运行此脚本: sudo bash setup-couchdb.sh"
@@ -159,7 +159,7 @@ fi
 print_success "root 权限确认"
 
 # ----- 2. 检测系统 -----
-((STEP++))
+STEP=$((STEP + 1))
 print_step "$STEP" "检测系统环境"
 if ! command -v apt &>/dev/null; then
     print_error "此脚本仅适用于 Debian / Ubuntu 系列 Linux（需要 apt 包管理器）"
@@ -182,7 +182,7 @@ fi
 print_success "系统: ${NAME:-Linux} (${CODENAME})"
 
 # ----- 3. 补装依赖 -----
-((STEP++))
+STEP=$((STEP + 1))
 print_step "$STEP" "检查并安装依赖工具"
 DEPS_TO_INSTALL=()
 for dep in curl gnupg ca-certificates openssl; do
@@ -201,7 +201,7 @@ else
 fi
 
 # ----- 4. 生成凭证 -----
-((STEP++))
+STEP=$((STEP + 1))
 print_step "$STEP" "生成安全凭证"
 COUCHDB_PASSWORD=$(openssl rand -hex 32)
 print_success "用户名: ${COUCHDB_USER}"
@@ -209,7 +209,7 @@ print_success "密码已随机生成 (64 位十六进制)"
 print_success "数据库名: ${COUCHDB_DB}"
 
 # ----- 5. 安装 CouchDB -----
-((STEP++))
+STEP=$((STEP + 1))
 print_step "$STEP" "安装 CouchDB"
 
 COUCHDB_ALREADY_INSTALLED=false
@@ -238,7 +238,7 @@ if ! $COUCHDB_ALREADY_INSTALLED; then
 fi
 
 # ----- 6. 等待 CouchDB 启动 -----
-((STEP++))
+STEP=$((STEP + 1))
 print_step "$STEP" "等待 CouchDB 服务就绪"
 
 # 确保服务在运行
@@ -261,7 +261,7 @@ fi
 print_success "CouchDB 已就绪"
 
 # ----- 7. 配置单节点 -----
-((STEP++))
+STEP=$((STEP + 1))
 print_step "$STEP" "配置 CouchDB 单节点"
 
 SINGLE_NODE_DONE=false
@@ -295,7 +295,7 @@ if ! $SINGLE_NODE_DONE; then
 fi
 
 # ----- 8. 设置监听地址 -----
-((STEP++))
+STEP=$((STEP + 1))
 print_step "$STEP" "设置监听地址为 0.0.0.0（允许外部设备连接）"
 set_config "chttpd" "bind_address" "0.0.0.0"
 
@@ -320,7 +320,7 @@ fi
 print_success "CouchDB 已重启并就绪"
 
 # ----- 9. 创建数据库 -----
-((STEP++))
+STEP=$((STEP + 1))
 print_step "$STEP" "创建数据库: ${COUCHDB_DB}"
 
 RESP=$(api "PUT" "/${COUCHDB_DB}")
@@ -336,7 +336,7 @@ else
 fi
 
 # ----- 10. 写入 9 项配置 -----
-((STEP++))
+STEP=$((STEP + 1))
 print_step "$STEP" "写入 CouchDB 配置（共 9 项）"
 
 CONFIG_OK=true
@@ -393,7 +393,7 @@ else
 fi
 
 # ----- 11. 验证 -----
-((STEP++))
+STEP=$((STEP + 1))
 print_step "$STEP" "验证配置"
 
 VERIFY_OK=true
@@ -447,7 +447,7 @@ else
 fi
 
 # ----- 12. IP 交互确认 -----
-((STEP++))
+STEP=$((STEP + 1))
 print_step "$STEP" "确认服务器连接地址"
 echo ""
 
@@ -517,7 +517,7 @@ echo ""
 print_success "服务器地址: ${SERVER_ADDR}"
 
 # ----- 13. 保存凭证并打印 -----
-((STEP++))
+STEP=$((STEP + 1))
 print_step "$STEP" "保存凭证并输出"
 
 # 写入凭证文件
