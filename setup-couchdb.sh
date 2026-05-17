@@ -203,10 +203,23 @@ fi
 # ----- 4. 生成凭证 -----
 STEP=$((STEP + 1))
 print_step "$STEP" "生成安全凭证"
-COUCHDB_PASSWORD=$(openssl rand -hex 32)
-print_success "用户名: ${COUCHDB_USER}"
-print_success "密码已随机生成 (64 位十六进制)"
-print_success "数据库名: ${COUCHDB_DB}"
+
+# 检查是否已有凭证文件（重新运行时复用密码，避免新旧密码冲突）
+if [[ -f "${CREDENTIALS_FILE}" ]]; then
+    COUCHDB_PASSWORD=$(grep -oP '密码:\s+\K\S+' "${CREDENTIALS_FILE}" 2>/dev/null || true)
+    if [[ -n "$COUCHDB_PASSWORD" ]]; then
+        print_success "检测到已有凭证文件，复用原有密码"
+        print_success "用户名: ${COUCHDB_USER}"
+        print_success "数据库名: ${COUCHDB_DB}"
+    fi
+fi
+
+if [[ -z "$COUCHDB_PASSWORD" ]]; then
+    COUCHDB_PASSWORD=$(openssl rand -hex 16)
+    print_success "用户名: ${COUCHDB_USER}"
+    print_success "密码已随机生成 (32 位十六进制)"
+    print_success "数据库名: ${COUCHDB_DB}"
+fi
 
 # ----- 5. 安装 CouchDB -----
 STEP=$((STEP + 1))
