@@ -524,9 +524,13 @@ echo -e "  ${BOLD}用户名:${NC}      ${GREEN}${BOLD}${COUCHDB_USER}${NC}"
 echo -e "  ${BOLD}密码:${NC}        ${GREEN}${BOLD}${COUCHDB_PASSWORD}${NC}"
 echo -e "  ${BOLD}数据库名:${NC}    ${GREEN}${BOLD}${COUCHDB_DB}${NC}"
 echo ""
-echo -e "  ${BOLD}Web 管理后台:${NC} ${CYAN}http://${SERVER_ADDR}:5984/_utils${NC}"
+echo -e "  ${CYAN}提示：如果配合一键 IP 证书脚本使用了反向代理 + HTTPS，${NC}"
+echo -e "  ${CYAN}服务器地址可填: https://你的公网IP/couchdb/${NC}"
+echo -e "  ${CYAN}手机端同步必须使用 https:// 开头的地址${NC}"
+echo -e "  ${CYAN}项目地址: https://github.com/ZO00OEY/ip-ssl-proxy${NC}"
 echo ""
-echo -e "  ${YELLOW}内部配置（一般用不上）: Erlang Cookie = ${COUCHDB_COOKIE}${NC}"
+echo -e "  ${BOLD}Web 管理后台:${NC} ${CYAN}http://${SERVER_ADDR}:5984/_utils${NC}"
+echo -e "  ${BOLD}内部配置（一般用不上）:${NC} ${CYAN}Erlang Cookie = ${COUCHDB_COOKIE}${NC}"
 echo ""
 echo -e "${YELLOW}${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 echo -e "${YELLOW}${BOLD}  ⚠ 重要提醒${NC}"
@@ -537,7 +541,8 @@ echo -e "  ${YELLOW}2. CouchDB 管理员密码不以明文形式保存在服务�
 echo -e "  ${YELLOW}    如需修改密码，请访问 Web 管理后台操作。${NC}"
 echo -e "  ${YELLOW}3. 凭证已备份到: ${CREDENTIALS_FILE}${NC}"
 echo ""
-read -r -p "  ⚠ 请确认已保存以上连接信息，按回车继续... " </dev/tty
+echo -e -n "  ${RED}${BOLD}⚠ 请确认已保存以上连接信息，按回车继续...${NC} "
+read -r </dev/tty
 echo ""
 
 # ----- 13. 防火墙配置（自动尝试，有错则跳过）-----
@@ -563,9 +568,11 @@ if command -v firewall-cmd &>/dev/null; then
 fi
 
 echo ""
-echo -e "  ${YELLOW}云服务器请在安全组中添加入站规则: TCP 5984${NC}"
+echo -e "  ${RED}${BOLD}云服务器请在安全组中添加入站规则: TCP 5984${NC}"
 echo ""
-read -r -p "  ⚠ 请确认已在云服务器控制台检查安全组入站规则（TCP 5984），按回车继续... " </dev/tty
+echo -e -n "  ${RED}${BOLD}⚠ 请确认已在云服务器控制台检查安全组入站规则（TCP 5984），按回车继续...${NC} "
+read -r </dev/tty
+echo ""
 echo -e "  ${YELLOW}建议：如果是公网服务器，请配合 Nginx 反向代理 + HTTPS 使用。${NC}"
 echo -e "  ${YELLOW}不建议将 CouchDB 5984 端口直接暴露在公网上。${NC}"
 echo ""
