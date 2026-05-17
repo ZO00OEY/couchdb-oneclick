@@ -537,6 +537,8 @@ echo -e "  ${YELLOW}2. CouchDB 管理员密码不以明文形式保存在服务�
 echo -e "  ${YELLOW}    如需修改密码，请访问 Web 管理后台操作。${NC}"
 echo -e "  ${YELLOW}3. 凭证已备份到: ${CREDENTIALS_FILE}${NC}"
 echo ""
+read -r -p "  ⚠ 请确认已保存以上连接信息，按回车继续... " </dev/tty
+echo ""
 
 # ----- 13. 防火墙配置（自动尝试，有错则跳过）-----
 print_step "13" "防火墙配置"
@@ -563,6 +565,7 @@ fi
 echo ""
 echo -e "  ${YELLOW}云服务器请在安全组中添加入站规则: TCP 5984${NC}"
 echo ""
+read -r -p "  ⚠ 请确认已在云服务器控制台检查安全组入站规则（TCP 5984），按回车继续... " </dev/tty
 echo -e "  ${YELLOW}建议：如果是公网服务器，请配合 Nginx 反向代理 + HTTPS 使用。${NC}"
 echo -e "  ${YELLOW}不建议将 CouchDB 5984 端口直接暴露在公网上。${NC}"
 echo ""
