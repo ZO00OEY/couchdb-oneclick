@@ -248,6 +248,7 @@ cat > /opt/couchdb/etc/local.d/bind_address.ini << INI
 [chttpd]
 bind_address = 0.0.0.0
 INI
+chown couchdb:couchdb /opt/couchdb/etc/local.d/bind_address.ini
 print_success "监听地址已设为 0.0.0.0"
 
 # ----- 7. 启动 CouchDB -----
@@ -313,10 +314,12 @@ credentials = true
 origins = app://obsidian.md, capacitor://localhost, http://localhost
 CONF
 
+chown couchdb:couchdb /opt/couchdb/etc/local.d/obsidian.ini
 print_success "配置文件已写入 /opt/couchdb/etc/local.d/obsidian.ini"
 
 echo ""
 echo "  重启 CouchDB 加载新配置..."
+systemctl reset-failed couchdb 2>/dev/null || true
 systemctl restart couchdb 2>/dev/null || service couchdb restart 2>/dev/null || true
 
 sleep 2
