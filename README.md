@@ -9,12 +9,7 @@ Debian 11/12 及 Ubuntu 20.04/22.04/24.04（需要 `apt` 包管理器）。
 ## 使用方法
 
 ```bash
-# 1. 下载脚本
-git clone https://github.com/你的仓库/couchdb-oneclick.git
-cd couchdb-oneclick
-
-# 2. 一键运行
-sudo bash setup-couchdb.sh
+git clone https://github.com/ZO00OEY/couchdb-oneclick.git && cd couchdb-oneclick && sudo bash setup-couchdb.sh
 ```
 
 脚本会自动完成：
