@@ -65,50 +65,13 @@ api() {
 }
 
 
-# 获取本机 IP 列表
-collect_ips() {
-    local ips=()
-    local ip
-
-    # 方式1：通过 ip 命令获取全局 IPv4（排除 Docker 网桥、回环）
-    if command -v ip &>/dev/null; then
-        while IFS= read -r ip; do
-            [[ -n "$ip" ]] && ips+=("$ip")
-        done < <(ip -4 addr show scope global 2>/dev/null | grep -oP '(?<=inet\s)\d+(\.\d+){3}' | sort -u)
-    fi
-
-    # 方式2：hostname -I 兜底
-    if [[ ${#ips[@]} -eq 0 ]] && command -v hostname &>/dev/null; then
-        while IFS= read -r ip; do
-            [[ -n "$ip" ]] && ips+=("$ip")
-        done < <(hostname -I 2>/dev/null | tr ' ' '\n' | grep -E '^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$' | grep -v '^127\.')
-    fi
-
-    # 尝试获取公网 IP（跟 ip-ssl-proxy/setup.sh 一致）
+# 获取公网 IP（跟 ip-ssl-proxy/setup.sh 一致）
+collect_ip() {
     local pub_ip
     pub_ip=$(curl -s --max-time 10 https://api.ipify.org 2>/dev/null || curl -s --max-time 10 https://icanhazip.com 2>/dev/null || true)
     if [[ -n "$pub_ip" ]] && [[ "$pub_ip" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-        local found=false
-        for ip in "${ips[@]}"; do
-            [[ "$ip" == "$pub_ip" ]] && found=true && break
-        done
-        if ! $found; then
-            ips+=("$pub_ip")
-        fi
+        echo "$pub_ip"
     fi
-
-    echo "${ips[@]}"
-}
-
-# 判断是否为内网 IP (RFC 1918)
-is_lan_ip() {
-    local ip=$1
-    local a b
-    IFS=. read -r a b _ _ <<< "$ip"
-    [[ "$a" == "10" ]] && return 0
-    [[ "$a" == "172" && "$b" -ge 16 && "$b" -le 31 ]] && return 0
-    [[ "$a" == "192" && "$b" == "168" ]] && return 0
-    return 1
 }
 
 # ===== 开始 =====
@@ -419,71 +382,25 @@ else
     print_warning "部分验证未通过"
 fi
 
-# ----- 11. IP 交互确认 -----
+# ----- 11. IP 交互确认（跟 ip-ssl-proxy/setup.sh 一致）-----
 STEP=$((STEP + 1))
 print_step "$STEP" "确认服务器连接地址"
 echo ""
 
-# 收集 IP
-IP_ARRAY=()
-while IFS=' ' read -ra ips; do
-    for ip in "${ips[@]}"; do
-        [[ -n "$ip" ]] && IP_ARRAY+=("$ip")
-    done
-done < <(collect_ips)
+SERVER_ADDR=$(collect_ip)
 
-# 去重
-IP_ARRAY=($(printf '%s\n' "${IP_ARRAY[@]}" | sort -u))
-
-if [[ ${#IP_ARRAY[@]} -eq 0 ]]; then
-    echo -e "  ${YELLOW}未能自动检测到 IP 地址${NC}"
+if [[ -z "$SERVER_ADDR" ]]; then
+    echo -e "  ${YELLOW}未能自动检测到公网 IP${NC}"
     echo -e "  ${YELLOW}（如使用了网络代理/VPN，检测的可能是代理 IP）${NC}"
     echo ""
     read -r -p "  请输入服务器地址 (IP 或域名): " SERVER_ADDR
-elif [[ ${#IP_ARRAY[@]} -eq 1 ]]; then
-    # 只有一个 IP，回车确认或输入
-    echo -e "  检测到服务器 IP: ${GREEN}${BOLD}${IP_ARRAY[0]}${NC}"
+else
+    echo -e "  检测到公网 IP: ${GREEN}${BOLD}${SERVER_ADDR}${NC}"
     echo -e "  ${YELLOW}  如使用了网络代理/VPN，检测的可能不是服务器真实 IP${NC}"
     echo ""
-    read -r -p "  按回车确认，或输入其他地址 (IP/域名): " input
-    if [[ -z "$input" ]]; then
-        SERVER_ADDR="${IP_ARRAY[0]}"
-    else
+    read -r -p "  按回车确认，或输入正确的地址 (IP/域名) [${SERVER_ADDR}]: " input
+    if [[ -n "$input" ]]; then
         SERVER_ADDR="$input"
-    fi
-else
-    # 多个 IP，编号选择
-    echo "  检测到以下可用地址:"
-    echo -e "  ${YELLOW}-----------------------------------------${NC}"
-    echo -e "  ${YELLOW}  如使用了网络代理/VPN，检测的可能不是服务器真实 IP${NC}"
-    echo -e "  ${YELLOW}  请选择正确的地址或手动输入${NC}"
-    echo -e "  ${YELLOW}-----------------------------------------${NC}"
-    echo -e "  ${CYAN}─────────────────────────────────${NC}"
-    i=1
-    for ip in "${IP_ARRAY[@]}"; do
-        if is_lan_ip "$ip"; then
-            echo -e "    ${BOLD}$i)${NC} ${CYAN}${ip}${NC} (内网)"
-        else
-            echo -e "    ${BOLD}$i)${NC} ${CYAN}${ip}${NC} (公网)"
-        fi
-        ((i++))
-    done
-    echo -e "    ${BOLD}$i)${NC} 以上都不是，手动输入"
-    echo -e "  ${CYAN}─────────────────────────────────${NC}"
-
-    MAX_OPTION=$i
-    while true; do
-        read -r -p "  请选择 [1-${MAX_OPTION}]: " choice
-        if [[ "$choice" =~ ^[0-9]+$ ]] && [[ "$choice" -ge 1 ]] && [[ "$choice" -le "$MAX_OPTION" ]]; then
-            break
-        fi
-        echo -e "  ${RED}请输入 1-${MAX_OPTION} 之间的数字${NC}"
-    done
-
-    if [[ "$choice" -eq "$MAX_OPTION" ]]; then
-        read -r -p "  请输入服务器真实地址 (IP 或域名): " SERVER_ADDR
-    else
-        SERVER_ADDR="${IP_ARRAY[$((choice-1))]}"
     fi
 fi
 
