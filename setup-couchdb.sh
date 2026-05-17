@@ -20,7 +20,7 @@ COUCHDB_USER="obsidian_user"
 COUCHDB_PASSWORD=""
 COUCHDB_DB="obsidian"
 SERVER_ADDR=""
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+SCRIPT_DIR="$PWD"
 CREDENTIALS_FILE="${SCRIPT_DIR}/couchdb-credentials.txt"
 
 # ===== 工具函数 =====
