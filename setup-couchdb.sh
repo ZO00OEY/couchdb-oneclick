@@ -193,8 +193,8 @@ done
 
 if [[ ${#DEPS_TO_INSTALL[@]} -gt 0 ]]; then
     echo -e "  需要安装: ${DEPS_TO_INSTALL[*]}"
-    apt update -qq
-    apt install -y -qq "${DEPS_TO_INSTALL[@]}"
+    apt update -q
+    apt install -y "${DEPS_TO_INSTALL[@]}"
     print_success "依赖安装完成"
 else
     print_success "所有依赖已就绪"
@@ -231,8 +231,8 @@ if ! $COUCHDB_ALREADY_INSTALLED; then
 
     # 安装
     echo "  正在安装 CouchDB..."
-    apt update -qq
-    apt install -y -qq couchdb
+    apt update -q
+    apt install -y couchdb
 
     print_success "CouchDB 安装完成"
 fi
