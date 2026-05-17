@@ -64,24 +64,6 @@ api() {
     fi
 }
 
-# 写入一项简单配置
-set_config() {
-    local section=$1 key=$2 value=$3
-    local resp http_code
-    resp=$(curl -s -w "\n%{http_code}" \
-        -X PUT "http://localhost:5984/_node/_local/_config/${section}/${key}" \
-        -u "${COUCHDB_USER}:${COUCHDB_PASSWORD}" \
-        -H "Content-Type: application/json" \
-        -d "\"${value}\"")
-    http_code=$(echo "$resp" | tail -1)
-    if [[ "$http_code" == "200" ]]; then
-        print_success "${section}/${key} = ${value}"
-        return 0
-    else
-        print_error "${section}/${key} 写入失败 (HTTP ${http_code})"
-        return 1
-    fi
-}
 
 # 获取本机 IP 列表
 collect_ips() {
@@ -102,9 +84,9 @@ collect_ips() {
         done < <(hostname -I 2>/dev/null | tr ' ' '\n' | grep -E '^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$' | grep -v '^127\.')
     fi
 
-    # 尝试获取公网 IP
+    # 尝试获取公网 IP（跟 ip-ssl-proxy/setup.sh 一致）
     local pub_ip
-    pub_ip=$(curl -4 -s --connect-timeout 3 ifconfig.me 2>/dev/null || true)
+    pub_ip=$(curl -s --max-time 10 https://api.ipify.org 2>/dev/null || curl -s --max-time 10 https://icanhazip.com 2>/dev/null || true)
     if [[ -n "$pub_ip" ]] && [[ "$pub_ip" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
         local found=false
         for ip in "${ips[@]}"; do
@@ -306,64 +288,55 @@ else
     exit 1
 fi
 
-# ----- 9. 写入 9 项配置 -----
+# ----- 9. 写入 9 项配置到 ini 文件 -----
 STEP=$((STEP + 1))
 print_step "$STEP" "写入 CouchDB 配置（共 9 项）"
 
-CONFIG_OK=true
+cat > /opt/couchdb/etc/local.d/obsidian.ini << 'CONF'
+[chttpd]
+require_valid_user = true
+enable_cors = true
+max_http_request_size = 4294967296
+
+[chttpd_auth]
+require_valid_user = true
+
+[httpd]
+enable_cors = true
+WWW-Authenticate = Basic realm="couchdb"
+
+[couchdb]
+max_document_size = 50000000
+
+[cors]
+credentials = true
+origins = app://obsidian.md, capacitor://localhost, http://localhost
+CONF
+
+print_success "配置文件已写入 /opt/couchdb/etc/local.d/obsidian.ini"
 
 echo ""
-echo "  认证与安全:"
-set_config "chttpd" "require_valid_user" "true" || CONFIG_OK=false
-set_config "chttpd_auth" "require_valid_user" "true" || CONFIG_OK=false
+echo "  重启 CouchDB 加载新配置..."
+systemctl restart couchdb 2>/dev/null || service couchdb restart 2>/dev/null || true
 
-echo ""
-echo "  CORS 跨域:"
-set_config "httpd" "enable_cors" "true" || CONFIG_OK=false
-set_config "chttpd" "enable_cors" "true" || CONFIG_OK=false
-set_config "cors" "credentials" "true" || CONFIG_OK=false
+sleep 2
+MAX_WAIT=30
+WAITED=0
+while [[ $WAITED -lt $MAX_WAIT ]]; do
+    if curl -s --connect-timeout 2 -u "${COUCHDB_USER}:${COUCHDB_PASSWORD}" "http://localhost:5984/_up" 2>/dev/null | grep -q '"status":"ok"'; then
+        break
+    fi
+    sleep 2
+    ((WAITED+=2))
+done
 
-echo ""
-echo "  资源限制:"
-set_config "chttpd" "max_http_request_size" "4294967296" || CONFIG_OK=false
-set_config "couchdb" "max_document_size" "50000000" || CONFIG_OK=false
-
-echo ""
-echo "  特殊配置:"
-# WWW-Authenticate 包含双引号，需要特殊处理
-HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" \
-    -X PUT "http://localhost:5984/_node/_local/_config/httpd/WWW-Authenticate" \
-    -u "${COUCHDB_USER}:${COUCHDB_PASSWORD}" \
-    -H "Content-Type: application/json" \
-    -d '"Basic realm=\"couchdb\""')
-if [[ "$HTTP_CODE" == "200" ]]; then
-    print_success "httpd/WWW-Authenticate = Basic realm=\"couchdb\""
-else
-    print_error "httpd/WWW-Authenticate 写入失败 (HTTP ${HTTP_CODE})"
-    CONFIG_OK=false
+if [[ $WAITED -ge $MAX_WAIT ]]; then
+    print_error "CouchDB 重启超时"
+    exit 1
 fi
+print_success "CouchDB 已重启，配置已生效"
 
-# cors/origins 包含特殊字符，需要特殊处理
-HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" \
-    -X PUT "http://localhost:5984/_node/_local/_config/cors/origins" \
-    -u "${COUCHDB_USER}:${COUCHDB_PASSWORD}" \
-    -H "Content-Type: application/json" \
-    -d '"app://obsidian.md, capacitor://localhost, http://localhost"')
-if [[ "$HTTP_CODE" == "200" ]]; then
-    print_success "cors/origins = app://obsidian.md, capacitor://localhost, http://localhost"
-else
-    print_error "cors/origins 写入失败 (HTTP ${HTTP_CODE})"
-    CONFIG_OK=false
-fi
-
-echo ""
-if $CONFIG_OK; then
-    print_success "所有配置写入完成"
-else
-    print_warning "部分配置写入失败，请查看上方错误"
-fi
-
-# ----- 10. 验证 -----
+# ----- 10. 验证配置 -----
 STEP=$((STEP + 1))
 print_step "$STEP" "验证配置"
 
@@ -388,7 +361,7 @@ else
 fi
 
 echo ""
-echo "  检查关键配置项..."
+echo "  检查关键配置项 (通过 API)..."
 check_config() {
     local section=$1 key=$2 expected=$3
     local actual
@@ -398,7 +371,7 @@ check_config() {
     if echo "$actual" | grep -q "$expected"; then
         print_success "${section}/${key}"
     else
-        print_error "${section}/${key} — 期望包含: ${expected}"
+        print_error "${section}/${key} — 期望: ${expected}, 实际: ${actual}"
         VERIFY_OK=false
     fi
 }
