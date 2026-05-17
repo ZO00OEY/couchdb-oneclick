@@ -256,7 +256,7 @@ couchdb couchdb/adminpass_confirm password ${COUCHDB_PASSWORD}
 DEBCONF
     echo "  正在安装 CouchDB..."
     apt update -q
-    apt install -y couchdb
+    DEBIAN_FRONTEND=noninteractive apt install -y couchdb
 
     print_success "CouchDB 安装完成"
 fi
