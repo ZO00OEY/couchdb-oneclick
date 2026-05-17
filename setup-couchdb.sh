@@ -235,7 +235,7 @@ if ! $COUCHDB_ALREADY_INSTALLED; then
     # 添加 GPG 密钥
     echo "  添加 Apache CouchDB GPG 密钥..."
     curl -fsSL https://couchdb.apache.org/repo/keys.asc | \
-        gpg --dearmor -o /usr/share/keyrings/couchdb-archive-keyring.gpg 2>/dev/null
+        gpg --dearmor --batch --yes -o /usr/share/keyrings/couchdb-archive-keyring.gpg 2>/dev/null
 
     # 添加 apt 源
     echo "  添加 CouchDB apt 源 (${CODENAME})..."
