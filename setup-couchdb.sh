@@ -242,7 +242,9 @@ if ! $COUCHDB_ALREADY_INSTALLED; then
     echo "deb [signed-by=/usr/share/keyrings/couchdb-archive-keyring.gpg] https://apache.jfrog.io/artifactory/couchdb-deb/ ${CODENAME} main" | \
         tee /etc/apt/sources.list.d/couchdb.list > /dev/null
 
-    # 安装
+    # 安装（预填配置项，跳过交互界面）
+    echo "couchdb couchdb/mode select standalone" | debconf-set-selections
+    echo "couchdb couchdb/bindaddress string 127.0.0.1" | debconf-set-selections
     echo "  正在安装 CouchDB..."
     apt update -q
     apt install -y couchdb
