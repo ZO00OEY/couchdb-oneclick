@@ -247,6 +247,7 @@ if ! $COUCHDB_ALREADY_INSTALLED; then
     debconf-set-selections << DEBCONF
 couchdb couchdb/mode select standalone
 couchdb couchdb/bindaddress string 127.0.0.1
+couchdb couchdb/cookie string monster
 couchdb couchdb/adminpass password ${COUCHDB_PASSWORD}
 couchdb couchdb/adminpass_confirm password ${COUCHDB_PASSWORD}
 DEBCONF
