@@ -216,7 +216,8 @@ STEP=$((STEP + 1))
 print_step "$STEP" "安装 CouchDB"
 
 COUCHDB_ALREADY_INSTALLED=false
-if command -v couchdb &>/dev/null || dpkg -l couchdb &>/dev/null 2>&1; then
+# dpkg -l 返回 "ii" 开头表示正常安装，"rc" 开头表示残留（已删除但配置没清）
+if dpkg -l couchdb 2>/dev/null | grep -q '^ii'; then
     echo -e "  ${YELLOW}CouchDB 似乎已安装，跳过安装步骤${NC}"
     COUCHDB_ALREADY_INSTALLED=true
 fi
@@ -250,8 +251,8 @@ print_step "$STEP" "写入管理员密码到配置"
 # CouchDB 3.4+ 不支持无密码启动（admin party 模式已废弃）
 # 必须在配置文件中创建管理员账号，CouchDB 才能启动
 mkdir -p /opt/couchdb/etc/local.d
-if [[ ! -f /opt/couchdb/etc/local.d/admin.ini ]]; then
-    cat > /opt/couchdb/etc/local.d/admin.ini << INI
+if ! grep -q "${COUCHDB_USER}" /opt/couchdb/etc/local.ini 2>/dev/null; then
+    cat >> /opt/couchdb/etc/local.ini << INI
 [admins]
 ${COUCHDB_USER} = ${COUCHDB_PASSWORD}
 INI
