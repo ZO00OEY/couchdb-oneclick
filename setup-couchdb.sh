@@ -519,10 +519,10 @@ echo -e "${GREEN}${BOLD}━━━━━━━━━━━━━━━━━━�
 echo ""
 echo -e "  ${BOLD}请将以下信息填入 Obsidian LiveSync 插件:${NC}"
 echo ""
-echo -e "  ${BOLD}服务器地址:${NC}  ${GREEN}http://${SERVER_ADDR}:5984${NC}"
-echo -e "  ${BOLD}用户名:${NC}      ${GREEN}${COUCHDB_USER}${NC}"
-echo -e "  ${BOLD}密码:${NC}        ${GREEN}${COUCHDB_PASSWORD}${NC}"
-echo -e "  ${BOLD}数据库名:${NC}    ${GREEN}${COUCHDB_DB}${NC}"
+echo -e "  ${BOLD}服务器地址:${NC}  ${GREEN}${BOLD}http://${SERVER_ADDR}:5984${NC}"
+echo -e "  ${BOLD}用户名:${NC}      ${GREEN}${BOLD}${COUCHDB_USER}${NC}"
+echo -e "  ${BOLD}密码:${NC}        ${GREEN}${BOLD}${COUCHDB_PASSWORD}${NC}"
+echo -e "  ${BOLD}数据库名:${NC}    ${GREEN}${BOLD}${COUCHDB_DB}${NC}"
 echo ""
 echo -e "  ${BOLD}Web 管理后台:${NC} ${CYAN}http://${SERVER_ADDR}:5984/_utils${NC}"
 echo ""
@@ -538,20 +538,30 @@ echo -e "  ${YELLOW}    如需修改密码，请访问 Web 管理后台操作。
 echo -e "  ${YELLOW}3. 凭证已备份到: ${CREDENTIALS_FILE}${NC}"
 echo ""
 
-# ----- 13. 防火墙提醒 -----
-print_step "13" "防火墙检查提醒"
+# ----- 13. 防火墙配置（自动尝试，有错则跳过）-----
+print_step "13" "防火墙配置"
 echo ""
-echo -e "  ${YELLOW}如果你使用了防火墙，请确保开放 5984 端口：${NC}"
+
+# ufw
+if command -v ufw &>/dev/null; then
+    if ufw allow 5984/tcp 2>/dev/null; then
+        print_success "ufw: 已放行 5984/tcp"
+    else
+        print_warning "ufw 配置失败，请手动放行: sudo ufw allow 5984/tcp"
+    fi
+fi
+
+# firewalld
+if command -v firewall-cmd &>/dev/null; then
+    if firewall-cmd --permanent --add-port=5984/tcp 2>/dev/null && firewall-cmd --reload 2>/dev/null; then
+        print_success "firewalld: 已放行 5984/tcp"
+    else
+        print_warning "firewalld 配置失败，请手动放行: sudo firewall-cmd --permanent --add-port=5984/tcp && sudo firewall-cmd --reload"
+    fi
+fi
+
 echo ""
-echo "    # ufw 防火墙"
-echo "    sudo ufw allow 5984/tcp"
-echo ""
-echo "    # firewalld 防火墙"
-echo "    sudo firewall-cmd --permanent --add-port=5984/tcp"
-echo "    sudo firewall-cmd --reload"
-echo ""
-echo "    # 云服务器安全组"
-echo "    请在云服务商控制台添加入站规则: TCP 5984"
+echo -e "  ${YELLOW}云服务器请在安全组中添加入站规则: TCP 5984${NC}"
 echo ""
 echo -e "  ${YELLOW}建议：如果是公网服务器，请配合 Nginx 反向代理 + HTTPS 使用。${NC}"
 echo -e "  ${YELLOW}不建议将 CouchDB 5984 端口直接暴露在公网上。${NC}"
